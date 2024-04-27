@@ -1,6 +1,6 @@
 from streamlit_webrtc import webrtc_streamer, RTCConfiguration
 import av
-import cv2
+from cv2 import cv2
 
 cascade = cv2.CascadeClassifier("indian_license_plate.xml")
 
