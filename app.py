@@ -5,7 +5,6 @@ import cv2
 import av
 import pytesseract
 
-pytesseract.pytesseract.tesseract_cmd = '/usr/bin/tesseract'
 # Load cascade classifiers
 # face_cascade = cv2.CascadeClassifier("haarcascade_russian_plate_number (1).xml")
 face_cascade = cv2.CascadeClassifier("indian_license_plate.xml")
