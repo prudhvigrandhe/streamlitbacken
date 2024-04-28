@@ -65,7 +65,7 @@ st.title("License Plate Detection")
 # Custom component to capture webcam feed
 webrtc_ctx = webrtc_streamer(
     key="example",
-    video_transformer_factory=VideoTransformer,
+    video_processor_factory=VideoTransformer,
     mode=WebRtcMode.SENDRECV, rtc_configuration=RTCConfiguration(
 					{"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
 					)
