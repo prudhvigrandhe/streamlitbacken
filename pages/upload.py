@@ -3,6 +3,14 @@ import cv2
 import numpy as np
 import os
 import pytesseract
+from pymongo import MongoClient
+
+uri = "mongodb+srv://cse443Prudhvi:pEjVbWv6oJHaHSJA@cluster0.7ournot.mongodb.net/"
+
+
+cluster = MongoClient(uri)
+db = cluster['cseData']  # Replace '<dbname>' with your actual database name
+collection = db['numberPlatesData'] 
 
 # Initialize OpenCV Cascade Classifier
 PLATE_CASCADE = cv2.CascadeClassifier('indian_license_plate.xml')
@@ -55,9 +63,16 @@ if uploaded_file:
 
         if text:
             # Draw rectangle around the license plate region
+            
             if roi is not None:
                 x, y, w, h = roi
                 cv2.rectangle(processed_image, (x, y), (x + w, y + h), (0, 255, 0), 3)
+            plate_data = collection.find_one({"license_plate_number": text})
+
+            if plate_data:
+                st.success(f"Detected License Plate: {text} - Found in Database")
+            else:
+                st.error(f"Detected License Plate: {text} - Not Found in Database")       
 
             # Display the processed image
             st.image(processed_image, caption=f"Detected License Plate: {text}", channels="BGR", use_column_width=True)

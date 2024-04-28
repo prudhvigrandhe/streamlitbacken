@@ -34,6 +34,7 @@ pydeck==0.9.0b1
 pyee==11.1.0
 Pygments==2.17.2
 pylibsrtp==0.10.0
+pymongo==4.7.0
 pyOpenSSL==24.1.0
 pytesseract==0.3.10
 python-dateutil==2.9.0.post0

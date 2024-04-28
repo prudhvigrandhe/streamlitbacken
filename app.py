@@ -4,14 +4,20 @@ import numpy as np
 import cv2
 import av
 import pytesseract
-
+from pymongo import MongoClient
 # Load cascade classifiers
 # face_cascade = cv2.CascadeClassifier("haarcascade_russian_plate_number (1).xml")
+
+uri = "mongodb+srv://cse443Prudhvi:pEjVbWv6oJHaHSJA@cluster0.7ournot.mongodb.net/"
+
+
+cluster = MongoClient(uri)
+db = cluster['cseData']  # Replace '<dbname>' with your actual database name
+collection = db['numberPlatesData'] 
+
+
 face_cascade = cv2.CascadeClassifier("indian_license_plate.xml")
-# /home/vscode/.local/bin/pytesseract
-#     /home/vscode/.local/lib/python3.11/site-packages/pytesseract-0.3.10.dist-info/*
-#     /home/vscode/.local/lib/python3.11/site-packages/pytesseract/*
-# Function to detect license plates and extract text
+
 def detect_and_extract_plate(image):
     img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     plates = face_cascade.detectMultiScale(img_gray, 1.1, 3)
@@ -89,6 +95,12 @@ if st.button("Capture Image"):
                 if roi is not None:
                     x, y, w, h = roi
                     cv2.rectangle(processed_image, (x, y), (x + w, y + h), (0, 255, 0), 3)
+                plate_data = collection.find_one({"license_plate_number": text})
+
+                if plate_data:
+                    st.success(f"Detected License Plate: {text} - Found in Database")
+                else:
+                    st.error(f"Detected License Plate: {text} - Not Found in Database")  
 
                 # Display the processed image
                 st.image(processed_image, caption=f"Detected License Plate: {text}", channels="BGR", use_column_width=True)
