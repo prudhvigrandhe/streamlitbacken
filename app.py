@@ -5,6 +5,7 @@ import cv2
 import av
 import pytesseract
 from pymongo import MongoClient
+import easyocr
 # Load cascade classifiers
 # face_cascade = cv2.CascadeClassifier("haarcascade_russian_plate_number (1).xml")
 
@@ -16,34 +17,29 @@ db = cluster['cseData']  # Replace '<dbname>' with your actual database name
 collection = db['numberPlatesData'] 
 
 
-face_cascade = cv2.CascadeClassifier("indian_license_plate.xml")
+cascade = cv2.CascadeClassifier("indian_license_plate.xml")
 
-def detect_and_extract_plate(image):
-    img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    plates = face_cascade.detectMultiScale(img_gray, 1.1, 3)
+def detect_and_extract_text(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    for (x, y, w, h) in plates:
-        area = w * h
-        if area > 300:
-            # Draw rectangle around the plate
-            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 3)
-            # Extract ROI (region of interest)
-            plate_roi = image[y:y + h, x:x + w]
+    # Detect number plate(s)
+    nplate = cascade.detectMultiScale(gray, 1.1, 4)
 
-            # Extract text from ROI using Tesseract OCR
-            extracted_text = pytesseract.image_to_string(plate_roi, lang='eng')
+    # Process each detected number plate
+    for i, (x, y, w, h) in enumerate(nplate):
+        wT, hT, cT = img.shape
+        a, b = (int(0.02 * wT), int(0.02 * hT))
 
-            new_text = ''
-            alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-            num = "0123456789"
-            for i in extracted_text:
-                if i in alpha or i in num:
-                    new_text += i
-                    
+        # Crop the number plate region
+        plate = img[y + a:y + h - a, x + b:x + w - b, :]
 
-            return new_text, image, (x, y, w, h)
-
-    return None, image, None
+        # Enhance the image to aid in text recognition
+        kernel = np.ones((1, 1), np.uint8)
+        plate = cv2.dilate(plate, kernel, iterations=1)
+        plate = cv2.erode(plate, kernel, iterations=1)
+        plate_gray = cv2.cvtColor(plate, cv2.COLOR_BGR2GRAY)
+        _, plate = cv2.threshold(plate_gray, 127, 255, cv2.THRESH_BINARY)
+    return plate
 
 # VideoTransformer class to process video frames
 class VideoTransformer(VideoTransformerBase):
@@ -56,7 +52,7 @@ class VideoTransformer(VideoTransformerBase):
         self.latest_frame = img
 
         # Detect faces
-        faces = face_cascade.detectMultiScale(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 1.1, 3)
+        faces = cascade.detectMultiScale(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 1.1, 3)
 
         # Draw rectangles around detected faces
         for (x, y, w, h) in faces:
@@ -82,30 +78,40 @@ if st.button("Capture Image"):
         # Get the last frame from the video transformer
         frame = webrtc_ctx.video_transformer.latest_frame
         
+        
 
         if frame is not None:
             # Convert frame to BGR format
+            
             img = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-
+            
             # Detect and extract license plate
-            text, processed_image, roi = detect_and_extract_plate(img)
+            processed_image = detect_and_extract_text(img)
+            
 
-            if text:
-                # Draw rectangle around the license plate region
-                if roi is not None:
-                    x, y, w, h = roi
-                    cv2.rectangle(processed_image, (x, y), (x + w, y + h), (0, 255, 0), 3)
-                plate_data = collection.find_one({"license_plate_number": text})
+            reader = easyocr.Reader(['en'])
+            result = reader.readtext(processed_image)
 
-                if plate_data:
-                    st.success(f"Detected License Plate: {text} - Found in Database")
-                else:
-                    st.error(f"Detected License Plate: {text} - Not Found in Database")  
+            li=[]
+            for detection in result:
+                license_plate_text = ""
+                text = detection[1]
+                for i in text:
+                    if i!=" ":
+                        license_plate_text+=i
+                li.append(license_plate_text)
+            for item in li:
+                if(len(item)>6):
+                    
+                    plate_data = collection.find_one({"license_plate_number": item})
 
-                # Display the processed image
-                st.image(processed_image, caption=f"Detected License Plate: {text}", channels="BGR", use_column_width=True)
-            else:
-                st.error(text)
+                    if plate_data:
+                        st.success(f"Detected License Plate: {item} - Found in Database")
+                    else:
+                        st.error(f"Detected License Plate: {item} - Not Found in Database")
+
+                    # Display the processed image
+                    st.image(processed_image, caption="Processed Image", use_column_width=True)
         else:
             st.warning("No frames captured. Please enable the webcam and try again.")
     else:
