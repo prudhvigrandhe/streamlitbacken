@@ -1,4 +1,5 @@
 import streamlit as st
+st.set_page_config(page_title="Catch At Toll", page_icon="/workspaces/streamlitbacken/road-barrier.png")
 from streamlit_webrtc import VideoTransformerBase, webrtc_streamer, WebRtcMode, RTCConfiguration
 import numpy as np
 import cv2
@@ -8,6 +9,16 @@ from pymongo import MongoClient
 import easyocr
 # Load cascade classifiers
 # face_cascade = cv2.CascadeClassifier("haarcascade_russian_plate_number (1).xml")
+
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
+
 
 uri = "mongodb+srv://cse443Prudhvi:pEjVbWv6oJHaHSJA@cluster0.7ournot.mongodb.net/"
 
@@ -61,7 +72,7 @@ class VideoTransformer(VideoTransformerBase):
         return img
 
 # Main Streamlit app
-st.title("License Plate Detection")
+st.title("ANPR")
 
 # Custom component to capture webcam feed
 webrtc_ctx = webrtc_streamer(
